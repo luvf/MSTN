@@ -1,167 +1,131 @@
-from keras.models import Model
-from keras.layers import Input, Dense
-from keras.layers import Flatten, Dense, Input, Conv2D, MaxPooling2D, GlobalAveragePooling1D, GlobalMaxPooling1D, AveragePooling1D
-from keras import losses
+import torch
+import torch.nn as nn
+from torch import Variable, Tensor
+
+
+from networks.base_network import Generator, Discriminator, Classifier
+
+
 import numpy as np
-from networks import base_network
 
 
-import keras.backend as K
 
-class MSTN(object):
+
+
+
+
+
+class MSTN(nn.Module):
     """docstring for MSTN"""
-    def __init__(self, input_dim, nb_class, Netwok  ):
+    def __init__(self, args, gen= None, dis = None, clf = None):
         super(MSTN, self).__init__()
-        self.nb_class = nb_class
-        self.gamma = 0.3
-        self.batch_size = 1
-        self.sem_loss= 0
-
-
-        self.latent_space_dim = (200,200,3)
-        self.network = Netwok
-        self.model = self.create_model()
-
-        self.CenterS = np.zeros([nb_class]+list(self.latent_space_dim))
-        self.CenterT = np.zeros([nb_class]+list(self.latent_space_dim))
-
-
-
-    def create_model(self):
-        
-        losses = {
             
-            "dis": self.D_loss,#lambda x,y  : self.D_loss(x,y),
-            "gen": self.S_loss,#lambda x,y  : self.S_loss(x,y), 
-            "clf": self.C_loss,#lambda x,y  : self.C_loss(x,y)
-            }
+        if gen == None :
+            self.gen = Generator(args)
+        if dis == None :
+            self.gen = Discriminator(args)
+        if clf == None :
+            self.gen = Classifier(args)
 
+        self.train = True
 
-        losses_wheights = {
-           
-            'dis' : 1,
-            'clf' : 1,
-            'gen' : 1,
+        #not the cleanest way
+        self.s_center = torch.zeros(args.n_class, requires_grad = False)
+        self.t_center = torch.zeros(args.n_class, requires_grad = False)
+        self.disc = args.center_interita
 
-        }
+    def train_model(self, train = True):
+        self.train = train
 
-        
-        inputs = Input(shape=(300,300,3))
-        gen = self.network.gen_generator(inputs)#self.latent_space_dim)
-
-        dis = self.network.gen_discriminor(gen)
-        
-        clf = self.network.gen_classifier(gen,self.nb_class)
-
-
-
-
-        model = Model(inputs, name='MSTN', outputs = [ dis,gen, clf])
-        model.summary()
-
-        model.compile(loss=losses,loss_weights=losses_wheights, optimizer="adam")
-        return model
-  
-  
-
-
- 
-
-
-    def D_loss(self,y_true,y_pred):
-        return losses.binary_crossentropy(y_true,y_pred)
-
-    def C_loss(self, y_true, y_pred):
-        
-        def map(x):
-            return x != -1 
-        #Ignore the square error if y_true[i] is near zero
-        sgn = K.map_fn(map,y_true)
-
-        return K.mean(sgn * K.square(y_true-y_pred),axis=-1)
-        #for i, y in enumerate(y_true):
-        #    if y != [-1]:
-        #        pr.append(y_pred[i])
-        #        tr.append(y_true[i])
-        #return losses.categorical_crossentropy(tr,pr)
-
-        
-            
-
-    def S_loss(self, y_true,y_pred):
-        return K.variable(self.sem_loss / self.batch_size)+ K.zeros_like(y_pred)
-
-    def gen_batch(Source, Target,batch_size):
-        DataS = [(x, 0, 1, y)   for x, y in Source]
-        DataT = [(x, 0, 0 ,[-1]) for x, y in Target]
-        Data = DataS+DataT
-        np.random.shuffle(Data)[:batch_size]
-
-        gen = list()
-        dis = list()
-        clf = list()
-        trainX= list()
-        for i,x in enumerate(Data):
-            trainX.append(x[0])
-            gen.append(x[1])
-            dis.append(x[2])
-            clf.append(x[3])
-
-        return
-        {
-            'input' : trainX,
-            'gen' : gen,
-            'dis' : dis,
-            'clf' : clf
-        }
-
-
-    def update_centroids(self, Spoints, Tpoints):
-        """
-            Spoints, Tpoints are 
-        """
-        g= self.gamma 
-        loss=0
-        for i in range(self.nb_class):
-            Cs = 1 / len(Spoints[i]) * sum(Spoints[i])
-            Ct = 1 / len(Tpoints[i]) * sum(Tpoints[i])
-            self.CenterS[i] =  g * self.centerS[i] + (1-g) * Cs
-            self.CenterT[i] =  g * self.centerT[i] + (1-g) * Ct
-            loss += np.power(self.CenterS[i]-self.CenterT[i])**2
-        self.sem_loss = loss
-
-
-    def update_centers(self, Data):
-        """
-            
-
-        """
-        Tpoints = [list() for i in range(self.nb_class)]
-        Spoints = [list() for i in range(self.nb_class)]
-
-        pred = self.model.predict_on_batch(Data["input"])
-        for i, p in enumerate(pred):
-            if Data[i][2] == [-1]:
-                Tpoints[np.argmax(p[2])].append(Data['input'][i])
-            else :
-                Spoints[Data["clf"]][i].append(Data["input"][i])
-
-        self.update_centroids(Spoints, Tpoints)
+    def forward(self, x):
+        features = self.gen(x)
+        C_out = self.clf(features)
+        if self.train :
+            D_out = self.dis(features)
+            return C_out, features, D_out
+        else :
+            return C_out
 
 
 
-    def train_dataset(SourceXY, TargetXY, test, epochs, batch_size):
-        """
-            TargetY may be void, only for metrics usage
-        """
+
+def centers(model, s_gen, t_gen, s_true, t_clf, Cs,Ct):
+    source = torch.argmax(s_true, 1).reshape(t_clf.size(0),1)# one Hot 
+    target = torch.argmax(t_clf, 1).reshape(t_clf.size(0),1)
+
+    shape = [t_clf.size(1)]+list(t_gen.size())
+    s_class =  torch.zeros(shape)
+    t_class =  torch.zeros(shape)
+
+    s_zeros = torch.zeros(source.size()[1:])
+    t_zeros = torch.zeros(target.size()[1:])
+
+    for i in range(t_clf.shape):
+        s_cur = torch.where(source.eq(i), s_gen, s_zeros)
+        t_cur = torch.where(target.eq(i), t_gen, t_zeros)
+        s_class[i]= s_cur.mean() *(1-model.disc) + Cs * model.disc
+        t_class[i]= t_cur.mean() *(1-model.disc) + Ct * model.disc
 
 
-        self.batch_size = batch_size
+    return s_class, t_class
 
-        for i in range(epochs):
-            data = gen_batch(SourceXY, TargetXY,batch_size)
-            self.update_centroids(data)
-            self.model.train_on_batch(data["input"], data)
+
+adversarial_loss = torch.nn.BCELoss()
+classification_loss =  torch.nn.MSELoss()
+
+
+def loss_batch(model, sx, tx, s_true, opt=None):
+    s_clf, s_gen, s_dis = model(sx)
+    t_clf, t_gen, t_dis = model(tx)
+
+    #classification loss
+    c_loss = classification_loss(s_clf, s_true)
+
+    # adversarial loss
+    source_tag = Variable(Tensor(sx.size(0), 1).fill_(1.0), requires_grad=False)
+    target_tag = Variable(Tensor(tx.size(0), 1).fill_(0.0), requires_grad=False)
+    source_loss = adversarial_loss(s_gen, source_tag)#0
+    target_loss = adversarial_loss(t_gen, target_tag)#1
+    d_loss = source_loss + target_loss
+   
+    #center loss more tricky
+    model.s_center, model.t_center = centers(model, s_gen, t_gen, s_true, t_clf, model.s_center, model.t_center)
+    s_loss = classification_loss(model.s_center, model.t_center)
+
+
+    loss = s_loss + d_loss + c_loss
+
+    if opt is not None:
+        loss.backward()
+        opt.step()
+        opt.zero_grad()
+
+    return loss.item()
+
+
+
+
+
+
+
+
+
+def fit(epochs, model, opt, train_dl, eval_func, valid_dl):
+    for epoch in range(epochs):
+            model.train()
+            for xb, yb in train_dl:
+                loss = loss_batch(model, xb, yb, opt)
+            print(epoch,loss)
+
+            #TODO
+            #model.eval()
+            #with torch.no_grad():
+            #    losses, nums = zip(
+            #        *[loss_batch(model, loss_func, xb, yb) for xb, yb in valid_dl]
+            #    )
+            #val_loss = np.sum(np.multiply(losses, nums)) / np.sum(nums)
+
+            #print(epoch, val_loss)
 
 
 

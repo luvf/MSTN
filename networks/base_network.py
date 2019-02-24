@@ -1,65 +1,74 @@
-from keras.models import Model
-from keras.layers import Input, Dense
-from keras.layers import Flatten, Dense, Input, Conv2D, MaxPooling2D,Conv1D, MaxPooling1D, GlobalAveragePooling1D, GlobalMaxPooling1D, AveragePooling1D
+import torch.nn as nn
 
+from torchvision.models import alexnet
 
+class Generator(nn.Module):
+    """docstring for Generator"""
+    def __init__(self,args ):
 
-class base_network(object):
-    """docstring for abstract_network"""
-    def __init__(self):
-        super(base_network, self).__init__()
-    
-    
-
-    def gen_generator(self,input):
-        #enc = Model()
+        self.alex = alexnet(pretrained= True)
+        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
         
-        x = Conv2D(128,  kernel_size=(5, 5), strides=(2, 2), activation='relu')(input)
-        x = MaxPooling2D( pool_size=(2, 2), strides=(2, 2))(x)
-        x = Conv2D(64,  kernel_size=(5, 5), strides=(2, 2), activation='relu')(x)
-        x = MaxPooling2D( pool_size=(2, 2), strides=(2, 2))(x)
-        x = Conv2D(32,  kernel_size=(5, 5), strides=(2, 2), activation='relu')(x)
-        x = MaxPooling2D( pool_size=(2, 2), strides=(2, 2))(x)
-        #modelx= Flatten()
-        x = Dense(4096, activation='relu', name='gen')(x)
+        self.main = nn.Sequential(
+            
+            #linpretrained
+            nn.Linear(6*6*256, 4096),
+            nn.ReLu(inplace=True),
+            nn.Dropout(0.5),#parametrize
+
+            nn.Linear(4096, 4096),
+            nn.ReLu(inplace=True),
+            nn.Dropout(p=0.5),
+
+            nn.Linear(4096, args.n_features),
+        )
+
+
+    def forward(self, x):
+        x = self.alex(x)
+        x = self.avgpool(x)
+        x = x.view(x.size(0), 256 * 6 * 6)#flatten
+        out = self.main(x)
+
+
+        return out
+
+
+
+
+class Discriminator(nn.Module):
+    """docstring for Generator"""
+    def __init__(self,args ):
         
-        #model = Model(input, x, name='generator')
-        #model.summary()
-        return x
-        #noise = Input(shape=(self.latent_dim,))
-        #img = model(noise)
+        self.main = nn.Sequential(
+            nn.Linear(args.n_features, 1024),
+            nn.ReLu(),
+            nn.Dropout(p=0.5),
 
+            nn.Linear(1024, 1024),
+            nn.ReLu(),
+            nn.Dropout(p=0.5),
+
+            nn.Linear(1024, 1),
+            nn.Sigmoid()
+        )
+
+
+    def forward(self, x):
+        return self.main(x)
+
+
+class Classifier(nn.Module):
+    """docstring for Generator"""
+    def __init__(self,args):
         
-
-    def gen_discriminor(self, input):       
-        #disc = Sequential() 
-        x = Dense(4096, activation='relu', name='fc3')(input)
-        x = Dense(4096, activation='relu', name='fc4')(x)
-        #x = Conv1D(64,  kernel_size=5,name = "cc1", strides=1, activation='relu')(input)
-        #x = MaxPooling1D( pool_size=2 ,name = "cc2", strides=1)(x)
-        #x = Conv2D(32,  kernel_size=(5, 5),name = "cc3", strides=(2, 2), activation='relu')(x)
-        #x = MaxPooling2D( pool_size=(2, 2),name = "cc4", strides=(2, 2))(x)
-        #x = Conv2D(64,  kernel_size=(5, 5),name = "cc5", strides=(2, 2), activation='relu')(x)
-        #x = MaxPooling2D( pool_size=(2, 2),name = "cc8", strides=(2, 2))(x)
-        #x = Dense(512, activation='relu', name='fc1')(x)
-        output = Dense(1, name='dis')(x)
-
-        #disc.summary()
-        #model = Model(input, output, name='discriminator', )
-        #model.summary()
-        return output
+        self.main = nn.Sequential(
+            nn.Linear(256, args.n_class),
+            nn.softmax()
+        )
+            
 
 
-        
+    def forward(self, x):
+        return self.main(x)
 
-    def gen_classifier(self, input, output_dim):
-        #clf = Sequential()
-
-        x = Dense(4096, activation='relu', name='fc1')(input)
-        x = Dense(4096, activation='relu', name='fc2')(x)
-        output = Dense(output_dim, activation='softmax', name='clf')(x)
-
-        #model = Model(input, x, name='classifier')
-        #model.summary()
-        return output
-        #clf.summary()
