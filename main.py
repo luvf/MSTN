@@ -44,6 +44,6 @@ optim = optim.Adam(mstn.parameters(),lr = args.lr, betas= (args.b1, args.b2))# t
 
 s_train, s_test = loader.mnist_loader(args)
 t_train, t_test = loader.svhn_loader(args)
+trainset = loader.TransferLoader(s_train,t_train)
 
-
-fit(args.epoch, mstn, optim, s_train,t_train, None, None)
+fit(args.epoch, mstn, optim, trainset, None, None)

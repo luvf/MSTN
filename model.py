@@ -23,9 +23,9 @@ class MSTN(nn.Module):
         if gen == None :
             self.gen = Generator(args)
         if dis == None :
-            self.gen = Discriminator(args)
+            self.dis = Discriminator(args)
         if clf == None :
-            self.gen = Classifier(args)
+            self.clf = Classifier(args)
 
         #self.train = True
 
@@ -39,6 +39,7 @@ class MSTN(nn.Module):
 
     def forward(self, x):
         features = self.gen(x)
+
         C_out = self.clf(features)
         #if self.train :
         D_out = self.dis(features)
@@ -107,10 +108,10 @@ def loss_batch(model, sx, tx, s_true, opt=None):
 
 
 
-def fit(epochs, model, opt, s_dataset, t_dataset, eval_func, valid_dl):
+def fit(epochs, model, opt, dataset, eval_func, valid_dl):
     for epoch in range(epochs):
             model.train()
-            for (sx, sy), (tx,_) in zip(s_dataset,t_dataset):
+            for sx, sy, tx,_ in dataset:
                 loss = loss_batch(model, sx, tx, sy, opt)
             print(epoch,loss)
 
