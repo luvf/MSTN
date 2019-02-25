@@ -9,31 +9,25 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         self.alex = alexnet(pretrained= True)
-        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
-        
-        self.main = nn.Sequential(
-            
-            #linpretrained
-            nn.Linear(6*6*256, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),#parametrize
 
+        self.alex.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
-
             nn.Linear(4096, args.n_features),
         )
-
+        
 
     def forward(self, x):
         x = self.alex(x)
-        x = self.avgpool(x)
-        x = x.view(x.size(0), 256 * 6 * 6)#flatten
-        out = self.main(x)
-
-
-        return out
+        return x
+        #x = self.avgpool(x)
+        #x = x.view(x.size(0), 256 * 6 * 6)#flatten
+        #out = self.main(x)
+        #return out
 
 
 

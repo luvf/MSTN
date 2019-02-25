@@ -13,7 +13,7 @@ os.makedirs('images', exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=64, help='size of the batches')
 parser.add_argument('--n_features', type=int, default=256, help='dimensionality of the featurespace')
 parser.add_argument('--nc', type=int, default=256, help='dimensionality of the featurespace')
 

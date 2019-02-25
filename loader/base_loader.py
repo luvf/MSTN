@@ -4,21 +4,40 @@
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
+tt= transforms.Lambda(lambda x: print(x.size()))
+
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+
+
+mnist_trannsform = transforms.Compose([
+        transforms.Resize(224),
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: x.expand(3, -1, -1)),   
+        normalize
+    ])
+
+
 def mnist_loader(args):
-    transform = transforms.Compose([transforms.ToTensor()])
-    train = datasets.MNIST("dataset/mnist", train = True, download= True, transform = transform)
-    test  = datasets.MNIST("dataset/mnist", train = False, download= True, transform= transform )
+    train = datasets.MNIST("dataset/mnist", train = True, download= True, transform = mnist_trannsform)
+    test  = datasets.MNIST("dataset/mnist", train = False, download= True, transform= mnist_trannsform )
 
     train_loader = DataLoader(train, batch_size= args.batch_size)
     test_loader = DataLoader(test, batch_size= args.batch_size)
     return train_loader, test_loader
 
 
+svhn_trannsform = transforms.Compose([
+        transforms.Resize(224),
+        transforms.ToTensor(),
+        normalize
+    ])
+
+
 
 def svhn_loader(args):
-    transform = transforms.Compose([transforms.ToTensor()])
-    train = datasets.SVHN("dataset/svhn", split = "train", download= True, transform = transform)
-    test  = datasets.SVHN("dataset/svhn", split = "test", download= True, transform= transform )
+    train = datasets.SVHN("dataset/svhn", split = "train", download= True, transform = svhn_trannsform)
+    test  = datasets.SVHN("dataset/svhn", split = "test", download= True, transform= svhn_trannsform )
 
     train_loader = DataLoader(train, batch_size= args.batch_size)
     test_loader = DataLoader(test, batch_size= args.batch_size)
