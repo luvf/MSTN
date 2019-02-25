@@ -30,6 +30,8 @@ class MSTN(nn.Module):
         #self.train = True
 
         #not the cleanest way
+
+        self.n_class = args.n_class
         self.s_center = torch.zeros(args.n_class, requires_grad = False)
         self.t_center = torch.zeros(args.n_class, requires_grad = False)
         self.disc = args.center_interita
@@ -50,36 +52,42 @@ class MSTN(nn.Module):
 
 
 
-def centers(model, s_gen, t_gen, s_true, t_clf, Cs,Ct):
+def update_centers(model, s_gen, t_gen, s_true, t_clf):
     source = torch.argmax(s_true, 1).reshape(t_clf.size(0),1)# one Hot 
     target = torch.argmax(t_clf, 1).reshape(t_clf.size(0),1)
 
-    shape = [t_clf.size(1)]+list(t_gen.size())
-    s_class =  torch.zeros(shape)
-    t_class =  torch.zeros(shape)
+    #shape = [t_clf.size(1)]+list(t_gen.size())
+    #s_class =  torch.zeros(shape)
+    #t_class =  torch.zeros(shape)
 
     s_zeros = torch.zeros(source.size()[1:])
     t_zeros = torch.zeros(target.size()[1:])
 
-    for i in range(t_clf.shape):
+    for i in range(model.n_class):
         s_cur = torch.where(source.eq(i), s_gen, s_zeros)
         t_cur = torch.where(target.eq(i), t_gen, t_zeros)
         
-        s_class[i]= s_cur.mean() *(1-model.disc) + Cs * model.disc
-        t_class[i]= t_cur.mean() *(1-model.disc) + Ct * model.disc
+        model.s_center[i]= s_cur.mean() *(1-model.disc) + model.s_center[i] * model.disc
+        model.t_center[i]= t_cur.mean() *(1-model.disc) + model.t_center[i] * model.disc
 
-    return s_class, t_class
+    #return s_class, t_class
 
 adversarial_loss = torch.nn.BCELoss()
 classification_loss =  torch.nn.MSELoss()
+
+def one_hot(batch,depth):
+    ones = torch.eye(depth)
+    return ones.index_select(0,batch)
 
 
 def loss_batch(model, sx, tx, s_true, opt=None):
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
 
+    s_true_hot = one_hot(s_true, model.n_class)
+   
     #classification loss
-    c_loss = classification_loss(s_clf, s_true)
+    c_loss = classification_loss(s_clf, s_true_hot)
 
     # adversarial loss
     source_tag = Tensor(sx.size(0), 1).fill_(1.0)
@@ -89,10 +97,10 @@ def loss_batch(model, sx, tx, s_true, opt=None):
     d_loss = source_loss + target_loss
    
     #center loss more tricky
-    model.s_center, model.t_center = centers(model, s_gen, t_gen, s_true, t_clf, model.s_center, model.t_center)
+    update_centers(model, s_gen, t_gen, s_true_hot, t_clf)
     s_loss = classification_loss(model.s_center, model.t_center)
 
-    loss = s_loss + d_loss + c_loss
+    loss = s_loss  + c_loss + d_loss
 
     if opt is not None:
         loss.backward()
