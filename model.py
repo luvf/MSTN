@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch import Variable, Tensor
+from torch import Tensor
 
 
 from networks.base_network import Generator, Discriminator, Classifier
@@ -27,24 +27,24 @@ class MSTN(nn.Module):
         if clf == None :
             self.gen = Classifier(args)
 
-        self.train = True
+        #self.train = True
 
         #not the cleanest way
         self.s_center = torch.zeros(args.n_class, requires_grad = False)
         self.t_center = torch.zeros(args.n_class, requires_grad = False)
         self.disc = args.center_interita
 
-    def train_model(self, train = True):
-        self.train = train
+    #def train_model(self, train = True):
+    #    self.dtrain = train
 
     def forward(self, x):
         features = self.gen(x)
         C_out = self.clf(features)
-        if self.train :
-            D_out = self.dis(features)
-            return C_out, features, D_out
-        else :
-            return C_out
+        #if self.train :
+        D_out = self.dis(features)
+        return C_out, features, D_out
+        #else :
+        #    return C_out
 
 
 
@@ -63,12 +63,11 @@ def centers(model, s_gen, t_gen, s_true, t_clf, Cs,Ct):
     for i in range(t_clf.shape):
         s_cur = torch.where(source.eq(i), s_gen, s_zeros)
         t_cur = torch.where(target.eq(i), t_gen, t_zeros)
+        
         s_class[i]= s_cur.mean() *(1-model.disc) + Cs * model.disc
         t_class[i]= t_cur.mean() *(1-model.disc) + Ct * model.disc
 
-
     return s_class, t_class
-
 
 adversarial_loss = torch.nn.BCELoss()
 classification_loss =  torch.nn.MSELoss()
@@ -82,8 +81,8 @@ def loss_batch(model, sx, tx, s_true, opt=None):
     c_loss = classification_loss(s_clf, s_true)
 
     # adversarial loss
-    source_tag = Variable(Tensor(sx.size(0), 1).fill_(1.0), requires_grad=False)
-    target_tag = Variable(Tensor(tx.size(0), 1).fill_(0.0), requires_grad=False)
+    source_tag = Tensor(sx.size(0), 1).fill_(1.0)
+    target_tag = Tensor(tx.size(0), 1).fill_(0.0)
     source_loss = adversarial_loss(s_gen, source_tag)#0
     target_loss = adversarial_loss(t_gen, target_tag)#1
     d_loss = source_loss + target_loss
@@ -91,7 +90,6 @@ def loss_batch(model, sx, tx, s_true, opt=None):
     #center loss more tricky
     model.s_center, model.t_center = centers(model, s_gen, t_gen, s_true, t_clf, model.s_center, model.t_center)
     s_loss = classification_loss(model.s_center, model.t_center)
-
 
     loss = s_loss + d_loss + c_loss
 
@@ -109,12 +107,11 @@ def loss_batch(model, sx, tx, s_true, opt=None):
 
 
 
-
-def fit(epochs, model, opt, train_dl, eval_func, valid_dl):
+def fit(epochs, model, opt, s_dataset, t_dataset, eval_func, valid_dl):
     for epoch in range(epochs):
             model.train()
-            for xb, yb in train_dl:
-                loss = loss_batch(model, xb, yb, opt)
+            for (sx, sy), (tx,_) in zip(s_dataset,t_dataset):
+                loss = loss_batch(model, sx, tx, sy, opt)
             print(epoch,loss)
 
             #TODO

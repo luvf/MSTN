@@ -2,9 +2,11 @@ import torch.nn as nn
 
 from torchvision.models import alexnet
 
+        
 class Generator(nn.Module):
     """docstring for Generator"""
     def __init__(self,args ):
+        super(Generator, self).__init__()
 
         self.alex = alexnet(pretrained= True)
         self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
@@ -13,11 +15,11 @@ class Generator(nn.Module):
             
             #linpretrained
             nn.Linear(6*6*256, 4096),
-            nn.ReLu(inplace=True),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),#parametrize
 
             nn.Linear(4096, 4096),
-            nn.ReLu(inplace=True),
+            nn.ReLU(inplace=True),
             nn.Dropout(p=0.5),
 
             nn.Linear(4096, args.n_features),
@@ -39,14 +41,15 @@ class Generator(nn.Module):
 class Discriminator(nn.Module):
     """docstring for Generator"""
     def __init__(self,args ):
-        
+        super(Discriminator, self).__init__()
+
         self.main = nn.Sequential(
             nn.Linear(args.n_features, 1024),
-            nn.ReLu(),
+            nn.ReLU(),
             nn.Dropout(p=0.5),
 
             nn.Linear(1024, 1024),
-            nn.ReLu(),
+            nn.ReLU(),
             nn.Dropout(p=0.5),
 
             nn.Linear(1024, 1),
@@ -61,10 +64,11 @@ class Discriminator(nn.Module):
 class Classifier(nn.Module):
     """docstring for Generator"""
     def __init__(self,args):
-        
+        super(Classifier, self).__init__()
+
         self.main = nn.Sequential(
             nn.Linear(256, args.n_class),
-            nn.softmax()
+            nn.Softmax()
         )
             
 

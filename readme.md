@@ -1,9 +1,9 @@
 implementation of 
 http://proceedings.mlr.press/v80/xie18c/xie18c.pdf
-using Keras
+using pytorch
 
 python 3.6
-keras 
+pytorch
 numpy 
 
 TODO: connect a dataset
