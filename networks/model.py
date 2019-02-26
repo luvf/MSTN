@@ -22,10 +22,6 @@ class MSTNoptim():
 
 
 
-
-
-
-
 class MSTN(nn.Module):
     """docstring for MSTN"""
     def __init__(self, args, gen= None, dis = None, clf = None):
@@ -41,10 +37,10 @@ class MSTN(nn.Module):
         #self.train = True
 
         #not the cleanest way
-
+        self.n_features = args.n_features
         self.n_class = args.n_class
-        self.s_center = torch.zeros(args.n_class, requires_grad = False)
-        self.t_center = torch.zeros(args.n_class, requires_grad = False)
+        self.s_center = torch.zeros((args.n_class, args.n_features), requires_grad = False)
+        self.t_center = torch.zeros((args.n_class, args.n_features), requires_grad = False)
         self.disc = args.center_interita
 
     #def train_model(self, train = True):
@@ -67,81 +63,68 @@ def update_centers(model, s_gen, t_gen, s_true, t_clf):
     source = torch.argmax(s_true, 1).reshape(t_clf.size(0),1)# one Hot 
     target = torch.argmax(t_clf, 1).reshape(t_clf.size(0),1)
 
-    #shape = [t_clf.size(1)]+list(t_gen.size())
-    #s_class =  torch.zeros(shape)
-    #t_class =  torch.zeros(shape)
+    s_center = torch.zeros(model.n_class, model.n_features)
+    t_center = torch.zeros(model.n_class, model.n_features)
 
     s_zeros = torch.zeros(source.size()[1:])
     t_zeros = torch.zeros(target.size()[1:])
 
     for i in range(model.n_class):
-        s_cur = torch.where(source.eq(i), s_gen, s_zeros)
-        t_cur = torch.where(target.eq(i), t_gen, t_zeros)
-        
-        model.s_center[i]= s_cur.mean() *(1-model.disc) + model.s_center[i] * model.disc
-        model.t_center[i]= t_cur.mean() *(1-model.disc) + model.t_center[i] * model.disc
+        s_cur = torch.where(source.eq(i), s_gen, s_zeros).mean(0)
+        t_cur = torch.where(target.eq(i), t_gen, t_zeros).mean(0)
+        s_center[i] = s_cur * (1 - model.disc) + model.s_center[i] * model.disc
+        t_center[i] = t_cur * (1 - model.disc) + model.t_center[i] * model.disc
 
+    
+    return s_center, t_center
     #return s_class, t_class
 
 adversarial_loss = torch.nn.BCELoss()
 classification_loss =  torch.nn.MSELoss()
-
-def one_hot(batch,depth):
-    ones = torch.eye(depth)
-    return ones.index_select(0,batch)
-
-    
 
 
 def loss_batch(model, sx, tx, s_true, opt):
     opt.base.zero_grad()
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
-
     #helpers
     source_tag = Tensor(sx.size(0), 1).fill_(1.0)
     target_tag = Tensor(tx.size(0), 1).fill_(0.0)
     s_true_hot = one_hot(s_true, model.n_class)
-   
     #classification loss
     c_loss = classification_loss(s_clf, s_true_hot)
 
     #generator loss
     s_G_loss = adversarial_loss(s_dis, target_tag)#0
     t_G_loss = adversarial_loss(t_dis, source_tag )#1
-
     G_loss = (s_G_loss + t_G_loss)/2
 
    
     #center loss more tricky
-    update_centers(model, s_gen, t_gen, s_true_hot, t_clf)
-    s_loss = classification_loss(model.s_center, model.t_center)
+    s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf)
+    model.s_center = s_c.detach()
+    model.t_center = t_c.detach()
+
+    s_loss = classification_loss(t_c, s_c)
 
     loss = s_loss + c_loss + G_loss
    
-    loss.backward(retain_graph=True)
-    opt.base.step()
-
-
+    loss.backward()
+    
     # Discrimanator loss
     opt.dis.zero_grad()
 
-    s_dis = model.dis(s_gen.detach())
-    t_dis = model.dis(t_gen.detach())
+    s_clf, s_gen, s_dis = model(sx)
+    t_clf, t_gen, t_dis = model(tx)
 
     s_D_loss = adversarial_loss(s_dis, source_tag)#0
     t_D_loss = adversarial_loss(t_dis, target_tag)#1
 
     D_loss = (s_D_loss + t_D_loss)/2
 
-    D_loss.backward(retain_graph=True)
+    D_loss.backward()
     opt.dis.step()
-
-
-    return loss.item()
-
-
-
+    return 0#loss.item()
 
 
 
@@ -153,6 +136,7 @@ def fit(epochs, model, opt, dataset, eval_func, valid_dl):
             for sx, sy, tx,_ in dataset:
                 loss = loss_batch(model, sx, tx, sy, opt)
                 print("aaa")
+                #print(model)
             print(epoch,loss)
 
             #TODO
@@ -166,4 +150,9 @@ def fit(epochs, model, opt, dataset, eval_func, valid_dl):
             #print(epoch, val_loss)
 
 
+#utils
 
+
+def one_hot(batch,depth):
+    ones = torch.eye(depth)
+    return ones.index_select(0,batch)

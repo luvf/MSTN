@@ -1,17 +1,20 @@
+import os
+
+import argparse
+import torch
+
+
 from networks.base_network import Generator, Discriminator, Classifier
-from model import MSTN, fit, MSTNoptim
+from networks.model import MSTN, fit, MSTNoptim
 
 import loader.base_loader as loader
 
-import argparse
-
-import os
 
 os.makedirs('images', exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=16, help='size of the batches')
 parser.add_argument('--n_features', type=int, default=256, help='dimensionality of the featurespace')
 parser.add_argument('--nc', type=int, default=256, help='dimensionality of the featurespace')
 
@@ -29,16 +32,17 @@ parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads 
 parser.add_argument('--img_size', type=int, default=32, help='size of each image dimension')
 parser.add_argument('--channels', type=int, default=3, help='number of image channels')
 
+parser.add_argument('--save', type=str, default="tained/model", help='dir of the trained_model')
+
+parser.add_argument('--load', type=str, default=None, help='dir of the trained_model')
+
 
 args = parser.parse_args()
 
-
-
-
 mstn = MSTN(args)
+if args.load != None:
+	mstn.load_state_dict(torch.load(args.load))
 
-#optim = optim.Adam(mstn.parameters(),lr = args.lr, betas= (args.b1, args.b2))# todo test with default settings
-#optimizer_G = optim.Adam(mstn.gen.parameters(),lr = args.lr, betas= (args.b1, args.b2)
 
 
 optim = MSTNoptim(mstn, args)
@@ -49,3 +53,6 @@ t_train, t_test = loader.svhn_loader(args)
 trainset = loader.TransferLoader(s_train,t_train)
 
 fit(args.epoch, mstn, optim, trainset, None, None)
+
+
+torch.save(mstn.state_dict(), args.save)
