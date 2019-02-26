@@ -128,23 +128,55 @@ def loss_batch(model, sx, tx, s_true, opt):
 
 
 
+def eval_batch(model, st, tx, s_true, t_true):
+    s_clf, s_gen, s_dis = model(sx)
+    t_clf, t_gen, t_dis = model(tx)
+    #helpers
+    source_tag = Tensor(sx.size(0), 1).fill_(1.0)
+    target_tag = Tensor(tx.size(0), 1).fill_(0.0)
 
+    #classification loss
+    s_true_hot = one_hot(s_true, model.n_class)
+    c_loss = classification_loss(s_clf, s_true_hot)
 
-def fit(epochs, model, opt, dataset, eval_func, valid_dl):
+    #generator loss
+    s_G_loss = adversarial_loss(s_dis, target_tag)#0
+    t_G_loss = adversarial_loss(t_dis, source_tag )#1
+    G_loss = (s_G_loss + t_G_loss)/2
+    #center loss more tricky
+    s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf)
+    model.s_center = s_c.detach()
+    model.t_center = t_c.detach()
+    s_loss = classification_loss(t_c, s_c)
+
+    #adversarial loss
+    s_D_loss = adversarial_loss(s_dis, source_tag)#0
+    t_D_loss = adversarial_loss(t_dis, target_tag)#1
+
+    D_loss = (s_D_loss + t_D_loss)/2
+
+    acc = metric(t_clf, t_true, torch.nn.MSELoss())
+
+    return np.array([acc, s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
+
+def fit(epochs, model, opt, dataset, eval_func, valid):
+    out = list()
     for epoch in range(epochs):
-            model.train()
-            for sx, sy, tx,_ in dataset:
-                loss = loss_batch(model, sx, tx, sy, opt)
-                print("aaa")
-                #print(model)
+        model.train()
+        for sx, sy, tx,_ in dataset:
+            loss = loss_batch(model, sx, tx, sy, opt)
+            print("aaa")
+            #print(model)
             print(epoch,loss)
-
-            #TODO
-            #model.eval()
-            #with torch.no_grad():
-            #    losses, nums = zip(
-            #        *[loss_batch(model, loss_func, xb, yb) for xb, yb in valid_dl]
-            #    )
+        model.eval()
+        with torch.no_grad():
+            loss = np.zeros(5)
+            for sx, sy, tx, ty in valid:
+                loss += loss_batch(model, sx, tx, sy, ty)
+            loss /= len(valid)-1
+            print(epoch, loss)
+        out.append((epoch, loss))
+    return out
             #val_loss = np.sum(np.multiply(losses, nums)) / np.sum(nums)
 
             #print(epoch, val_loss)
@@ -153,6 +185,13 @@ def fit(epochs, model, opt, dataset, eval_func, valid_dl):
 #utils
 
 
-def one_hot(batch,depth):
-    ones = torch.eye(depth)
+def one_hot(batch,classes):
+    ones = torch.eye(classes)
     return ones.index_select(0,batch)
+
+from itertools import permutations
+
+
+def metric(pred, true, loss):
+    return min([loss(pred,torch.tensor(one_hot([perm[i] for i in true]))) for perm in permutations(range(torch.max(true))) ] )
+
