@@ -35,9 +35,15 @@ parser.add_argument('--channels', type=int, default=3, help='number of image cha
 parser.add_argument('--save', type=str, default="tained/model", help='dir of the trained_model')
 
 parser.add_argument('--load', type=str, default=None, help='dir of the trained_model')
+parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA mode')
 
 
 args = parser.parse_args()
+args.device = None
+if not args.disable_cuda and torch.cuda.is_available():
+    args.device = torch.device('cuda')
+else:
+    args.device = torch.device('cpu')
 
 mstn = MSTN(args)
 if args.load != None:
@@ -52,7 +58,7 @@ s_train, s_test = loader.mnist_loader(args)
 t_train, t_test = loader.svhn_loader(args)
 trainset = loader.TransferLoader(s_train,t_train)
 
-fit(args.epoch, mstn, optim, trainset, None, None)
+fit(args, args.epoch, mstn, optim, trainset, None, None)
 
 
 torch.save(mstn.state_dict(), args.save)
