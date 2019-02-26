@@ -90,8 +90,11 @@ def loss_batch(model, sx, tx, s_true, opt, args):
 	classification_loss =  torch.nn.MSELoss()
 	adversarial_loss.to(device=args.device)
 	classification_loss.to(device=args.device)
-
 	opt.base.zero_grad()
+	model.to(device=args.device)
+	sx = sx.to(device=args.device)
+	tx = tx.to(device=args.device)
+	
 	s_clf, s_gen, s_dis = model(sx)
 	t_clf, t_gen, t_dis = model(tx)
 	#helpers
