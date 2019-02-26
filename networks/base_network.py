@@ -2,6 +2,7 @@ import torch.nn as nn
 
 from torchvision.models import alexnet
 
+
         
 class Generator(nn.Module):
     """docstring for Generator"""

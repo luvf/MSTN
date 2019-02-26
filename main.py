@@ -1,7 +1,5 @@
 from networks.base_network import Generator, Discriminator, Classifier
-from model import MSTN, fit 
-
-from torch import optim
+from model import MSTN, fit, MSTNoptim
 
 import loader.base_loader as loader
 
@@ -13,7 +11,7 @@ os.makedirs('images', exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--batch_size', type=int, default=64, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
 parser.add_argument('--n_features', type=int, default=256, help='dimensionality of the featurespace')
 parser.add_argument('--nc', type=int, default=256, help='dimensionality of the featurespace')
 
@@ -39,7 +37,11 @@ args = parser.parse_args()
 
 mstn = MSTN(args)
 
-optim = optim.Adam(mstn.parameters(),lr = args.lr, betas= (args.b1, args.b2))# todo test with default settings
+#optim = optim.Adam(mstn.parameters(),lr = args.lr, betas= (args.b1, args.b2))# todo test with default settings
+#optimizer_G = optim.Adam(mstn.gen.parameters(),lr = args.lr, betas= (args.b1, args.b2)
+
+
+optim = MSTNoptim(mstn, args)
 
 
 s_train, s_test = loader.mnist_loader(args)
