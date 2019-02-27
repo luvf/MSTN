@@ -62,7 +62,7 @@ class TransferLoader:
         #self.func = func
 
     def __len__(self):
-        return min(40,len(self.source), len(self.target))
+        return min(50,len(self.source), len(self.target))
 
     def __iter__(self):
         s = iter(self.source)
@@ -116,14 +116,14 @@ class ImageLoader(Dataset):
         return len(self.imgs)
         
 
-def split_data(data)
+def split_data(data):
     #TODO : split data between training set and testing set, for now training set = testing set which is totally stupid :/
     
     train_loader = DataLoader(data, batch_size= args.batch_size, shuffle=True)
     test_loader = DataLoader(data, batch_size= args.batch_size, shuffle=True)
     return train_loader, test_loader 
             
-def office_loader(args, subsetm ):
+def office_loader(args, subset):
     data = ImageLoader('dataset/office/' + subset + '/','dataset/office/'+ subset + '_label.txt')
     return split_data(data)
 

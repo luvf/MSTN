@@ -61,20 +61,20 @@ if args.load != None:
 
 optim = MSTNoptim(mstn, args)
 
-
 s_train, s_test = loader.mnist_loader(args)
 t_train, t_test = loader.svhn_loader(args)
+
+'''
 a_train, a_test = loader.office_amazon_loader(args)
 d_train, d_test = loader.office_dslr_loader(args)
 w_train, w_test = loader.office_webcam_loader(args)
-
+'''
 
 
 trainset = loader.TransferLoader(s_train,t_train)
 teststet = loader.TransferLoader(s_test,t_test)
 
 
-print(len(trainset))
 fit(args, args.epoch, mstn, optim, trainset, teststet)
 
 

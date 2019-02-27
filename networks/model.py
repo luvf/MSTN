@@ -172,7 +172,7 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 
     acc = metric(t_clf, t_true, torch.nn.MSELoss(),args)
 
-    return np.array([acc, s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
+    return np.array([acc.item(), s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
 
     
 def fit(args, epochs, model, opt, dataset, valid):
@@ -225,5 +225,5 @@ def metric(pred,true, loss, args):
         sum_class = torch.where(true.eq(i), pred, zeros).sum(0)
         i_class[i]= torch.argmax(sum_class)
 
-    true2 = one_hot(torch.tensor([i_class[i] for i in true]),n_class)
+    true2 = one_hot(torch.tensor([i_class[i] for i in true]),n_class).to(device=args.device)
     return loss(pred, true2)
