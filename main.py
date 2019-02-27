@@ -36,11 +36,18 @@ parser.add_argument('--save', type=str, default="tained/model", help='dir of the
 parser.add_argument('--save_step', type=int, default=0, help='dir of the trained_model')
 
 parser.add_argument('--load', type=str, default=None, help='dir of the trained_model')
+parser.add_argument('--set_device', type=str, default="cpu", help='set cuda')
 
 
 args = parser.parse_args()
+args.device = None
+if args.set_device == "cuda" and torch.cuda.is_available():
+    args.device = torch.device('cuda')
+else:
+    args.device = torch.device('cpu')
 
-mstn = MSTN(args)
+mstn = MSTN(args).to(device = args.device )
+
 if args.load != None:
 	mstn.load_state_dict(torch.load(args.load))
 
@@ -56,7 +63,7 @@ teststet = loader.TransferLoader(s_test,t_test)
 
 
 print(len(trainset))
-fit(args.epoch, mstn, optim, trainset, teststet,args)
+fit(args, args.epoch, mstn, optim, trainset, teststet)
 
 
 torch.save(mstn.state_dict(), args.save)
