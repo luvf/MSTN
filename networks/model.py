@@ -119,6 +119,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     loss = C_loss + S_loss * args.lam  + G_loss * args.lam
    
     loss.backward()
+    opt.step()
     opt.zero_grad()
     
     # Discrimanator loss
