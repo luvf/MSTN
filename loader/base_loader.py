@@ -1,5 +1,6 @@
 import torch
-from torch.utils.data import DataLoader
+import os
+from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms
 
 tt= transforms.Lambda(lambda x: print(x.size()))
@@ -90,6 +91,7 @@ def dslr_loader(args):
 
 
 class TransferLoader:
+<<<<<<< HEAD
 	def __init__(self, source, target):
 		self.source = source
 		self.target = target
@@ -104,3 +106,99 @@ class TransferLoader:
 		t = iter(self.target)
 		for _ in range(len(self)-1):
 			yield (*s.next(), *t.next())
+=======
+    def __init__(self, source, target):
+        self.source = source
+        self.target = target
+        
+        #self.func = func
+
+    def __len__(self):
+        return min(40,len(self.source), len(self.target))
+
+    def __iter__(self):
+        s = iter(self.source)
+        t = iter(self.target)
+        for _ in range(len(self)):
+            yield (*s.next(), *t.next())
+  
+
+IMG_EXTENSIONS = [
+    '.jpg', '.JPG', '.jpeg', '.JPEG',
+    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
+]
+
+def is_image_file(filename):
+    return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
+
+def default_loader(path):
+    return Image.open(path).convert('RGB')
+
+def make_dataset(root, label):
+    images = []
+    labeltxt = open(label)
+    for line in labeltxt:
+        data = line.strip().split(' ')
+        if is_image_file(data[0]):
+            path = os.path.join(root, data[0])
+        gt = int(data[1])
+        item = (path, gt)
+        images.append(item)
+    return images
+
+class ImageLoader(Dataset):
+    def __init__(self, root, label, transform=None, loader=default_loader):
+        imgs = make_dataset(root, label)
+        self.root = root
+        self.label = label
+        self.imgs = imgs
+        self.transform = transform
+        self.loader = loader
+
+    def __getitem__(self, index):
+        path, target = self.imgs[index]
+        img = self.loader(path)
+
+        if self.transform is not None:
+            img = self.transform(img)
+        
+        return img, target
+
+    def __len__(self):
+        return len(self.imgs)
+        
+
+def split_data(data)
+    #TODO : split data between training set and testing set, for now training set = testing set which is totally stupid :/
+    
+    train_loader = DataLoader(data, batch_size= args.batch_size, shuffle=True)
+    test_loader = DataLoader(data, batch_size= args.batch_size, shuffle=True)
+    return train_loader, test_loader 
+            
+def office_loader(args, subsetm ):
+    data = ImageLoader('dataset/office/' + subset + '/','dataset/office/'+ subset + '_label.txt')
+    return split_data(data)
+
+
+    
+def office_amazon_loader(args):
+    return office_loader(args, 'amazon')
+def office_dslr_loader(args):
+    return office_loader(args, 'dslr')
+def office_webcam_loader(args):
+    return office_loader(args, 'webcam')
+    
+            
+def clef_loader(args, subsetm ):
+    data = ImageLoader('dataset/imageCLEF/' + subset + '/','dataset/imageCLEF/'+ subset + 'List.txt')
+    return split_data(data)
+    
+def clef_b_loader(args):
+    return office_loader(args, 'b')
+def clef_c_loader(args):
+    return office_loader(args, 'c')
+def clef_i_loader(args):
+    return office_loader(args, 'i')
+def clef_p_loader(args):
+    return office_loader(args, 'p')
+>>>>>>> f725943b76c74bfd268282e6c8f2a11b585e9801
