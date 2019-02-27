@@ -4,7 +4,7 @@ import argparse
 import torch
 
 
-from networks.base_network import AlexGen
+from networks.base_network import Generator, Discriminator, Classifier
 from networks.model import MSTN, fit, MSTNoptim
 
 import loader.base_loader as loader
@@ -56,7 +56,7 @@ mstn = MSTN(args).to(device = args.device)
 
 
 if args.load != None:
-	mstn.load_state_dict(torch.load(args.load))
+    mstn.load_state_dict(torch.load(args.load))
 
 
 optim = MSTNoptim(mstn, args)
@@ -64,6 +64,12 @@ optim = MSTNoptim(mstn, args)
 
 s_train, s_test = loader.mnist_loader(args)
 t_train, t_test = loader.svhn_loader(args)
+a_train, a_test = loader.office_amazon_loader(args)
+d_train, d_test = loader.office_dslr_loader(args)
+w_train, w_test = loader.office_webcam_loader(args)
+
+
+
 trainset = loader.TransferLoader(s_train,t_train)
 teststet = loader.TransferLoader(s_test,t_test)
 
