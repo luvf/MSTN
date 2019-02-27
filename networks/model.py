@@ -10,6 +10,9 @@ from networks.base_network import Generator, Discriminator, Classifier
 import numpy as np
 
 
+from tqdm import tqdm
+
+
 
 class MSTNoptim():
     """docstring for optim"""
@@ -159,23 +162,24 @@ def eval_batch(model, st, tx, s_true, t_true):
 
     return np.array([acc, s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
 
-def fit(epochs, model, opt, dataset, eval_func, valid):
+def fit(epochs, model, opt, dataset, valid, args):
     out = list()
     for epoch in range(epochs):
         model.train()
-        for sx, sy, tx,_ in dataset:
+
+        for sx, sy, tx,_ in tqdm(dataset):
             loss = loss_batch(model, sx, tx, sy, opt)
-            print("aaa")
-            #print(model)
-            print(epoch,loss)
         model.eval()
         with torch.no_grad():
             loss = np.zeros(5)
-            for sx, sy, tx, ty in valid:
+            for sx, sy, tx, ty in tqdm(valid):
                 loss += loss_batch(model, sx, tx, sy, ty)
             loss /= len(valid)-1
             print(epoch, loss)
         out.append((epoch, loss))
+        if args.save_step:
+            torch.save(model.state_dict(), args.save+'step')
+
     return out
             #val_loss = np.sum(np.multiply(losses, nums)) / np.sum(nums)
 

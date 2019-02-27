@@ -33,6 +33,7 @@ parser.add_argument('--img_size', type=int, default=32, help='size of each image
 parser.add_argument('--channels', type=int, default=3, help='number of image channels')
 
 parser.add_argument('--save', type=str, default="tained/model", help='dir of the trained_model')
+parser.add_argument('--save_step', type=int, default=0, help='dir of the trained_model')
 
 parser.add_argument('--load', type=str, default=None, help='dir of the trained_model')
 
@@ -51,8 +52,11 @@ optim = MSTNoptim(mstn, args)
 s_train, s_test = loader.mnist_loader(args)
 t_train, t_test = loader.svhn_loader(args)
 trainset = loader.TransferLoader(s_train,t_train)
+teststet = loader.TransferLoader(s_test,t_test)
 
-fit(args.epoch, mstn, optim, trainset, None, None)
+
+print(len(trainset))
+fit(args.epoch, mstn, optim, trainset, teststet,args)
 
 
 torch.save(mstn.state_dict(), args.save)
