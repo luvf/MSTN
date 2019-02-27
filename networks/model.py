@@ -170,9 +170,9 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 
     D_loss = (s_D_loss + t_D_loss)
 
-    acc = metric(t_clf, t_true, torch.nn.MSELoss(),args)
-
-    return np.array([acc.item(), s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
+    acc = metric(t_clf, t_true, accuracy,args)
+    acc2 = metric(s_clf, s_true, accuracy,args)
+    return np.array([acc.item(),  acc2.item(), s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
 
     
 def fit(args, epochs, model, opt, dataset, valid):
@@ -188,11 +188,10 @@ def fit(args, epochs, model, opt, dataset, valid):
             loss = loss_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, opt, args)
         model.eval()
         with torch.no_grad():
-            loss = np.zeros(5)
+            loss = np.zeros(6)
             for sx, sy, tx, ty in tqdm(valid):
-                loss += eval_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, ty,args)
-            print("acc : {}, sem : {}, clf {}, Gen {}, Dis {}".format(*loss))
-            loss /= len(valid)-1
+                loss += eval_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, ty,args)/len(valid)
+            print("acc : {}, s_acc : {}, sem : {}, clf {}, Gen {}, Dis {}".format(*loss))
         out.append((epoch, loss))
         if args.save_step:
             torch.save(model.state_dict(), args.save+'step')
@@ -210,6 +209,11 @@ def one_hot(batch,classes):
     return ones.index_select(0,batch)
 
 from itertools import permutations
+
+def accuracy(pred, true):
+    out =  torch.argmax(pred,1) == torch.argmax(true, 1)
+    return out.sum().float()/out.size(0)
+
 
 def metric_help(pred, true, loss,args):
     return min([loss(pred,one_hot(torch.tensor([perm[i] for i in true]),args.n_class).to(device = args.device)) for perm in permutations(range(args.n_class)) ] )
