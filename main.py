@@ -4,7 +4,7 @@ import argparse
 import torch
 
 
-from networks.base_network import Generator, Discriminator, Classifier
+from networks.base_network import AlexGen
 from networks.model import MSTN, fit, MSTNoptim
 
 import loader.base_loader as loader
@@ -47,7 +47,7 @@ if args.set_device == "cuda" and torch.cuda.is_available():
 else:
     args.device = torch.device('cpu')
 
-mstn = MSTN(args).to(device = args.device )
+mstn = MSTN(args,gen= AlexGen(args)).to(device = args.device)
 
 if args.load != None:
 	mstn.load_state_dict(torch.load(args.load))

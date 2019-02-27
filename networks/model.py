@@ -29,12 +29,16 @@ class MSTN(nn.Module):
     """docstring for MSTN algo"""
     def __init__(self, args, gen= None, dis = None, clf = None):
         super(MSTN, self).__init__()
-            
-        if gen == None :
+        
+        self.gen = gen
+        self.dis = dis
+        self.clf = clf
+
+        if self.gen == None :
             self.gen = Generator(args)
-        if dis == None :
+        if self.dis == None :
             self.dis = Discriminator(args)
-        if clf == None :
+        if self.clf == None :
             self.clf = Classifier(args)
 
         #self.train = True
@@ -182,6 +186,7 @@ def fit(args, epochs, model, opt, dataset, valid):
             loss = np.zeros(5)
             for sx, sy, tx, ty in tqdm(valid):
                 loss += eval_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, ty,args)
+            print(loss)
             loss /= len(valid)-1
             print(epoch, loss)
         out.append((epoch, loss))
