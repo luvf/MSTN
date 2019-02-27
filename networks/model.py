@@ -42,8 +42,8 @@ class MSTN(nn.Module):
 		#not the cleanest way
 		self.n_features = args.n_features
 		self.n_class = args.n_class
-		self.s_center = torch.zeros((args.n_class, args.n_features), requires_grad = False).to(device=args.device)
-		self.t_center = torch.zeros((args.n_class, args.n_features), requires_grad = False).to(device=args.device)
+		self.s_center = torch.zeros((args.n_class, args.n_features), requires_grad = False, device=args.device)
+		self.t_center = torch.zeros((args.n_class, args.n_features), requires_grad = False, device=args.device)
 		self.disc = args.center_interita
 
 	#def train_model(self, train = True):
@@ -69,8 +69,8 @@ def update_centers(model, s_gen, t_gen, s_true, t_clf, args):
 	s_center = torch.zeros(model.n_class, model.n_features, device=args.device)
 	t_center = torch.zeros(model.n_class, model.n_features, device=args.device)
 
-	s_zeros = torch.zeros(source.size()[1:]).to(device=args.device)
-	t_zeros = torch.zeros(target.size()[1:]).to(device=args.device)
+	s_zeros = torch.zeros(source.size()[1:], device=args.device)
+	t_zeros = torch.zeros(target.size()[1:], device=args.device)
 
 	for i in range(model.n_class):
 		s_cur = torch.where(source.eq(i), s_gen, s_zeros).mean(0)
@@ -89,10 +89,9 @@ classification_loss =  torch.nn.MSELoss()
 
 
 def loss_batch(model, sx, tx, s_true, opt, args):
-	adversarial_loss.to(device=args.device)
-	classification_loss.to(device=args.device)
+	#adversarial_loss.to(device=args.device)
+	#classification_loss.to(device=args.device)
 	opt.base.zero_grad()
-	model.to(device=args.device)
 	sx = sx.to(device=args.device)
 	tx = tx.to(device=args.device)
 	
@@ -145,7 +144,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
 
 
 
-def eval_batch(model, st, tx, s_true, t_true,args):
+def eval_batch(model, sx, tx, s_true, t_true,args):
 	#adversarial_loss = torch.nn.BCELoss()
 	#classification_loss =  torch.nn.MSELoss()
 	#adversarial_loss.to(device=args.device)
