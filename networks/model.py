@@ -170,7 +170,7 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 
     D_loss = (s_D_loss + t_D_loss)
 
-    acc = metric(t_clf, t_true, torch.nn.MSELoss(),args)
+    acc = metric(t_clf, t_true, accuracy,args)
 
     return np.array([acc, s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
 
@@ -210,6 +210,11 @@ def one_hot(batch,classes):
     return ones.index_select(0,batch)
 
 from itertools import permutations
+
+def accuracy(pred, true):
+    return torch.argmax(pred,1) == torch.argmax(true, 1).sum()
+
+
 
 def metric_help(pred, true, loss,args):
     return min([loss(pred,one_hot(torch.tensor([perm[i] for i in true]),args.n_class).to(device = args.device)) for perm in permutations(range(args.n_class)) ] )
