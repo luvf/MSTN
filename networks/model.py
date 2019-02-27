@@ -4,7 +4,7 @@ from torch import Tensor
 
 from torch import optim
 
-from networks.base_network import Generator, Discriminator, Classifier
+from networks.base_network import Generator, Discriminator, Classifier, Rx
 
 
 import numpy as np
@@ -18,9 +18,9 @@ class MSTNoptim():
     """docstring for optim algo"""
     def __init__(self, model, args):
         super(MSTNoptim, self).__init__()
-        base_params = list(model.gen.parameters()) +  list(model.clf.parameters())
-        self.base = optim.Adam(base_params, lr = args.lr, betas= (args.b1, args.b2))
-        self.dis = optim.Adam(model.dis.parameters(),lr = args.lr, betas= (args.b1, args.b2))#
+        base_params = list(model.gen.parameters()) +  list(model.clf.parameters()) + list(model.dis.parameters())
+        self.base = optim.Adam(base_params, lr = args.lr, betas= (args.b1, args.b2), weight_decay = 0.0005)
+        self.dis = optim.Adam(model.dis.parameters(),lr = args.lr, betas= (args.b1, args.b2), weight_decay = 0.0005)
 
 
 
@@ -41,9 +41,8 @@ class MSTN(nn.Module):
         if self.clf == None :
             self.clf = Classifier(args)
 
-        #self.train = True
-
-        #not the cleanest way
+        self.rx = Rx()
+        
         self.n_features = args.n_features
         self.n_class = args.n_class
         self.s_center = torch.zeros((args.n_class, args.n_features), requires_grad = False, device=args.device)
@@ -58,7 +57,7 @@ class MSTN(nn.Module):
 
         C_out = self.clf(features)
         #if self.train :
-        D_out = self.dis(features)
+        D_out = self.dis(self.rx(features))
         return C_out, features, D_out
         #else :
         #    return C_out
@@ -95,6 +94,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
+
     #helpers
     source_tag = torch.ones((sx.size(0), 1), device = args.device)
     target_tag = torch.zeros((tx.size(0), 1), device = args.device)
@@ -103,41 +103,42 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     C_loss = classification_loss(s_clf, s_true_hot)
 
     #generator loss
-    s_G_loss = adversarial_loss(s_dis, target_tag)#0
-    t_G_loss = adversarial_loss(t_dis, source_tag)#1
-    G_loss = (s_G_loss + t_G_loss)/2
+    s_G_loss = adversarial_loss(s_dis, source_tag)#0
+    t_G_loss = adversarial_loss(t_dis, target_tag )#1
+    G_loss =  (s_G_loss + t_G_loss)
 
    
     #center loss more tricky
     s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf, args)
     
+
     
     model.s_center = s_c.detach()
     model.t_center = t_c.detach()
 
     S_loss = classification_loss(t_c, s_c)
 
-    loss = S_loss + C_loss + G_loss
+    loss = C_loss + S_loss * args.lam  + G_loss * args.lam
    
     loss.backward()
     
     # Discrimanator loss
     opt.dis.zero_grad()
-
+    '''
     s_dis = model.dis(s_gen.detach())
     t_dis = model.dis(t_gen.detach())
 
-    #s_dis = s_dis.to(device=args.device)
-    #t_dis = t_dis.to(device=args.device)
+  
 
     s_D_loss = adversarial_loss(s_dis, source_tag)#0
     t_D_loss = adversarial_loss(t_dis, target_tag)#1
 
-    D_loss = (s_D_loss + t_D_loss)/2
+    D_loss = (s_D_loss + t_D_loss)/2 * args.lam
 
     D_loss.backward()
     opt.dis.step()
-    return S_loss.item(), C_loss.item(), G_loss.item(), D_loss.item()
+    '''
+    return S_loss.item(), C_loss.item(), G_loss.item(), 0#D_loss.item()
 
 
 
@@ -154,9 +155,9 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     c_loss = classification_loss(s_clf, s_true_hot)
 
     #generator loss
-    s_G_loss = adversarial_loss(s_dis, target_tag)#0
+    s_G_loss = adversarial_loss(s_dis, target_tag )#0
     t_G_loss = adversarial_loss(t_dis, source_tag )#1
-    G_loss = (s_G_loss + t_G_loss)/2
+    G_loss = (s_G_loss + t_G_loss)
     #center loss more tricky
     s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf,args)
     model.s_center = s_c.detach()
@@ -167,7 +168,7 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     s_D_loss = adversarial_loss(s_dis, source_tag)#0
     t_D_loss = adversarial_loss(t_dis, target_tag)#1
 
-    D_loss = (s_D_loss + t_D_loss)/2
+    D_loss = (s_D_loss + t_D_loss)
 
     acc = metric(t_clf, t_true, torch.nn.MSELoss(),args)
 
@@ -178,6 +179,10 @@ def fit(args, epochs, model, opt, dataset, valid):
     out = list()
     for epoch in range(epochs):
         model.train()
+        
+        args.lr = opt.base.param_groups[-1]["lr"]
+        #opt = MSTNoptim(model, args)
+        args.lam  = adaptation_factor(epoch*1.0/epochs)
 
         for sx, sy, tx,_ in tqdm(dataset):
             loss = loss_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, opt, args)
@@ -186,9 +191,8 @@ def fit(args, epochs, model, opt, dataset, valid):
             loss = np.zeros(5)
             for sx, sy, tx, ty in tqdm(valid):
                 loss += eval_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, ty,args)
-            print(loss)
+            print("acc : {}, sem : {}, clf {}, Gen {}, Dis {}".format(*loss))
             loss /= len(valid)-1
-            print(epoch, loss)
         out.append((epoch, loss))
         if args.save_step:
             torch.save(model.state_dict(), args.save+'step')
@@ -196,7 +200,11 @@ def fit(args, epochs, model, opt, dataset, valid):
 
 #utils
 
+def decay(start_rate,epoch,num_epochs):
+    return start_rate/pow(1 + 0.001*epoch, 0.75)
 
+def adaptation_factor(qq):
+    return 1/(1+np.exp(- 10 * qq )) - 1
 def one_hot(batch,classes):
     ones = torch.eye(classes)
     return ones.index_select(0,batch)
@@ -210,7 +218,7 @@ def metric_help(pred, true, loss,args):
 def metric(pred,true, loss, args):
     n_class = args.n_class
 
-    true = true.reshape(pred.size(0),1)
+    true = true.reshape(pred.size(0),1).to(device = args.device)
     zeros = torch.zeros((pred.size(0), 1), device = args.device)
     i_class = torch.zeros_like(true)
     for i in range(n_class):

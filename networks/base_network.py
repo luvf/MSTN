@@ -3,6 +3,9 @@ import torch.nn as nn
 from torchvision.models import AlexNet, alexnet
 
 import torch.utils.model_zoo as model_zoo
+from torch.autograd import Function
+
+
 
 model_urls = {
     'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
@@ -88,9 +91,19 @@ class Classifier(nn.Module):
             nn.Linear(256, args.n_class),
             nn.Softmax()
         )
-            
-
 
     def forward(self, x):
         return self.main(x)
 
+
+
+
+class Rx(nn.Module):
+    """docstring for Generator"""
+   
+    
+    def forward(semf, i):
+        return i
+
+    def backward(semf, grad_output):
+        return -grad_output

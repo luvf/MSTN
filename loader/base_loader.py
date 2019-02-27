@@ -61,7 +61,7 @@ class TransferLoader:
         #self.func = func
 
     def __len__(self):
-        return min(len(self.source), len(self.target))
+        return min(40,len(self.source), len(self.target))
 
     def __iter__(self):
         s = iter(self.source)
