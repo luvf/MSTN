@@ -22,7 +22,7 @@ parser.add_argument('--nc', type=int, default=256, help='dimensionality of the f
 
 parser.add_argument('--lr', type=float, default=0.02, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.9, help='adam: decay of first order momentum of gradient')
-parser.add_argument('--b2', type=float, default=0.9, help='adam: decay of first order momentum of gradient')
+parser.add_argument('--b2', type=float, default=0.99, help='adam: decay of first order momentum of gradient')
 
 parser.add_argument('--center_interita', type=int, default=0.7, help='centers inertia over batches')
 #parser.add_argument('--adv_w', type=float, default=0.999, help='adversarial wheight')
