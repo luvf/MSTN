@@ -94,8 +94,8 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
     #helpers
-    source_tag = Tensor(sx.size(0), 1).fill_(1.0).to(device=args.device)
-    target_tag = Tensor(tx.size(0), 1).fill_(0.0).to(device=args.device)
+    source_tag = Tensor(sx.size(0), 1,device=args.device).fill_(1.0)
+    target_tag = Tensor(tx.size(0), 1,device=args.device).fill_(0.0)
     s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
     #classification loss
     C_loss = classification_loss(s_clf, s_true_hot)
@@ -122,6 +122,8 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     # Discrimanator loss
     opt.dis.zero_grad()
 
+    s_dis = model.dis(s_gen)
+    t_dis = model.dis(t_gen)
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
     #s_dis = s_dis.to(device=args.device)
@@ -143,8 +145,9 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     t_clf, t_gen, t_dis = model(tx)
 
     #helpers
-    source_tag = Tensor(sx.size(0), 1).fill_(1.0)
-    target_tag = Tensor(tx.size(0), 1).fill_(0.0)
+    source_tag = Tensor(sx.size(0), 1,device=args.device).fill_(1.0)
+    target_tag = Tensor(tx.size(0), 1,device=args.device).fill_(0.0)
+    s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
 
     #classification loss
     s_true_hot = one_hot(s_true, model.n_class)
