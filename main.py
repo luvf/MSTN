@@ -43,6 +43,7 @@ args = parser.parse_args()
 args.device = None
 if args.set_device == "cuda" and torch.cuda.is_available():
     args.device = torch.device('cuda')
+    print("cuda enabled")
 else:
     args.device = torch.device('cpu')
 

@@ -88,14 +88,12 @@ classification_loss =  torch.nn.MSELoss()
 def loss_batch(model, sx, tx, s_true, opt, args):
     opt.base.zero_grad()
     opt.dis.zero_grad()
-    sx = sx.to(device=args.device)
-    tx = tx.to(device=args.device)
     
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
     #helpers
-    source_tag = Tensor(sx.size(0), 1).fill_(1.0).to(device=args.device)
-    target_tag = Tensor(tx.size(0), 1).fill_(0.0).to(device=args.device)
+    source_tag = torch.ones((sx.size(0), 1), device = args.device)
+    target_tag = torch.zeros((tx.size(0), 1), device = args.device)
     s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
     #classification loss
     C_loss = classification_loss(s_clf, s_true_hot)
@@ -144,8 +142,8 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     t_clf, t_gen, t_dis = model(tx)
 
     #helpers
-    source_tag = Tensor(sx.size(0), 1).fill_(1.0).to(device=args.device)
-    target_tag = Tensor(tx.size(0), 1).fill_(0.0).to(device=args.device)
+    source_tag = torch.ones((sx.size(0), 1), device = args.device)
+    target_tag = torch.zeros((tx.size(0), 1), device = args.device)
     s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
 
     #classification loss
@@ -200,6 +198,19 @@ def one_hot(batch,classes):
 
 from itertools import permutations
 
-def metric(pred, true, loss,args):
+def metric_help(pred, true, loss,args):
     return min([loss(pred,one_hot(torch.tensor([perm[i] for i in true]),args.n_class).to(device = args.device)) for perm in permutations(range(args.n_class)) ] )
 
+
+def metric(pred,true, loss, args):
+    n_class = args.n_class
+
+    true = true.reshape(pred.size(0),1)
+    zeros = torch.zeros((pred.size(0), 1), device = args.device)
+    i_class = torch.zeros_like(true)
+    for i in range(n_class):
+        sum_class = torch.where(true.eq(i), pred, zeros).sum(0)
+        i_class[i]= torch.argmax(sum_class)
+
+    true2 = one_hot(torch.tensor([i_class[i] for i in true]),n_class)
+    return loss(pred, true2)
