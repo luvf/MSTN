@@ -149,7 +149,6 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
 
     #classification loss
-    s_true_hot = one_hot(s_true, model.n_class)
     c_loss = classification_loss(s_clf, s_true_hot)
 
     #generator loss
@@ -157,7 +156,7 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     t_G_loss = adversarial_loss(t_dis, source_tag )#1
     G_loss = (s_G_loss + t_G_loss)/2
     #center loss more tricky
-    s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf)
+    s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf,args)
     model.s_center = s_c.detach()
     model.t_center = t_c.detach()
     s_loss = classification_loss(t_c, s_c)
@@ -168,7 +167,7 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 
     D_loss = (s_D_loss + t_D_loss)/2
 
-    acc = metric(t_clf, t_true, torch.nn.MSELoss())
+    acc = metric(t_clf, t_true, torch.nn.MSELoss(),args)
 
     return np.array([acc, s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
 
@@ -201,7 +200,6 @@ def one_hot(batch,classes):
 
 from itertools import permutations
 
-
-def metric(pred, true, loss):
-    return min([loss(pred,torch.tensor(one_hot([perm[i] for i in true]))) for perm in permutations(range(torch.max(true))) ] )
+def metric(pred, true, loss,args):
+    return min([loss(pred,one_hot(torch.tensor([perm[i] for i in true]),args.n_class).to(device = args.device)) for perm in permutations(range(args.n_class)) ] )
 
