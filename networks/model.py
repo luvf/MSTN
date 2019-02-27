@@ -24,7 +24,6 @@ class MSTNoptim():
 
 
 
-
 class MSTN(nn.Module):
     """docstring for MSTN algo"""
     def __init__(self, args, gen= None, dis = None, clf = None):
@@ -89,8 +88,7 @@ adversarial_loss = torch.nn.BCELoss()
 classification_loss =  torch.nn.MSELoss()
 
 def loss_batch(model, sx, tx, s_true, opt, args):
-    opt.base.zero_grad()
-    opt.dis.zero_grad()
+    
     
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
@@ -121,9 +119,10 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     loss = C_loss + S_loss * args.lam  + G_loss * args.lam
    
     loss.backward()
+    opt.zero_grad()
     
     # Discrimanator loss
-    opt.dis.zero_grad()
+    #opt.dis.zero_grad()
     '''
     s_dis = model.dis(s_gen.detach())
     t_dis = model.dis(t_gen.detach())
@@ -155,8 +154,8 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     c_loss = classification_loss(s_clf, s_true_hot)
 
     #generator loss
-    s_G_loss = adversarial_loss(s_dis, target_tag )#0
-    t_G_loss = adversarial_loss(t_dis, source_tag )#1
+    s_G_loss = adversarial_loss(s_dis, source_tag)#0
+    t_G_loss = adversarial_loss(t_dis, target_tag)#1
     G_loss = (s_G_loss + t_G_loss)
     #center loss more tricky
     s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf,args)
@@ -178,14 +177,6 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 def fit(args, epochs, model, opt, dataset, valid):
     out = list()
     for epoch in range(epochs):
-        model.train()
-        
-        args.lr = opt.base.param_groups[-1]["lr"]
-        #opt = MSTNoptim(model, args)
-        args.lam  = adaptation_factor(epoch*1.0/epochs)
-
-        for sx, sy, tx,_ in tqdm(dataset):
-            loss = loss_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, opt, args)
         model.eval()
         with torch.no_grad():
             loss = np.zeros(6)
@@ -193,8 +184,17 @@ def fit(args, epochs, model, opt, dataset, valid):
                 loss += eval_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, ty,args)/len(valid)
             print("acc : {}, s_acc : {}, sem : {}, clf {}, Gen {}, Dis {}".format(*loss))
         out.append((epoch, loss))
+        model.train()
+        args.lr = opt.param_groups[-1]["lr"]
+        #opt = MSTNoptim(model, args)
+        args.lam  = adaptation_factor(epoch*1.0/epochs)
+
+        for sx, sy, tx,_ in tqdm(dataset):
+            loss = loss_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, opt, args)
+        
         if args.save_step:
             torch.save(model.state_dict(), args.save+'step')
+            print(out)
     return out
 
 #utils
@@ -221,13 +221,12 @@ def metric_help(pred, true, loss,args):
 
 def metric(pred,true, loss, args):
     n_class = args.n_class
-
     true = true.reshape(pred.size(0),1).to(device = args.device)
     zeros = torch.zeros((pred.size(0), 1), device = args.device)
-    i_class = torch.zeros_like(true)
+    i_class = torch.zeros(n_class, device = args.device).long()
     for i in range(n_class):
         sum_class = torch.where(true.eq(i), pred, zeros).sum(0)
-        i_class[i]= torch.argmax(sum_class)
+        i_class[i] = torch.argmax(sum_class)
 
     true2 = one_hot(torch.tensor([i_class[i] for i in true]),n_class).to(device=args.device)
     return loss(pred, true2)
