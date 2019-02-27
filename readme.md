@@ -10,3 +10,5 @@ TODO: connect a dataset
 Try other networks...
 
 
+TODO: push data from this link: https://drive.google.com/file/d/1rFRWnECyIe0QTl-8t6BjAFZX-qLfyGtK/view?usp=sharing
+       to the folder loader
