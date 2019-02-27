@@ -122,8 +122,8 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     # Discrimanator loss
     opt.dis.zero_grad()
 
-    s_dis = model.dis(s_gen)
-    t_dis = model.dis(t_gen)
+    s_dis = model.dis(s_gen.detach())
+    t_dis = model.dis(t_gen.detach())
 
     #s_dis = s_dis.to(device=args.device)
     #t_dis = t_dis.to(device=args.device)
