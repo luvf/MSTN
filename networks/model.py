@@ -100,7 +100,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
 	#helpers
 	source_tag = Tensor(sx.size(0), 1).fill_(1.0).to(device=args.device)
 	target_tag = Tensor(tx.size(0), 1).fill_(0.0).to(device=args.device)
-	s_true_hot = one_hot(s_true, model.n_class)
+	s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
 	#classification loss
 	c_loss = classification_loss(s_clf, s_true_hot)
 
