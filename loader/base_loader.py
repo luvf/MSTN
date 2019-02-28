@@ -10,7 +10,7 @@ normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5],
 
 
 mnist_trannsform = transforms.Compose([
-		transforms.Resize(28),
+		transforms.Resize(224),
 		transforms.ToTensor(),
 		transforms.Lambda(lambda x: x.expand(3, -1, -1)),
         #transforms.Lambda(lambda x: x/x.sum()),
@@ -28,7 +28,7 @@ def mnist_loader(args):
 
 
 svhn_trannsform = transforms.Compose([
-		transforms.Resize(28),#224
+		transforms.Resize(224),#224
 		transforms.ToTensor(),
         #transforms.Lambda(lambda x: x/x.sum()),
 		normalize
@@ -100,8 +100,7 @@ class TransferLoader:
         #self.func = func
 
     def __len__(self):
-        return min(10,len(self.source), len(self.target))
-
+        return min(20,len(self.source)-1, len(self.target)-1)
 
     def __iter__(self):
         s = iter(self.source)
