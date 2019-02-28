@@ -183,14 +183,14 @@ def fit(args, epochs, model, opt, dataset, valid):
         args.lam  = adaptation_factor(epoch*1.0/epochs)
 
         for sx, sy, tx,_ in tqdm(dataset):
-            loss = loss_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, opt, args)
+            loss = loss_batch(model, sx.to(args.device), tx.to(args.device), sy.to(args.device), opt, args)
             #print(list(model.clf.parameters()))
         model.eval()
         if epoch %5 == 0:
             with torch.no_grad():
                 loss = np.zeros(5)
                 for sx, sy, tx, ty in tqdm(valid):
-                    loss += eval_batch(model, sx.to(device= args.device), tx.to(device= args.device), sy, ty,args)/len(valid)
+                    loss += eval_batch(model, sx.to(args.device), tx.to(args.device), sy.to(args.device), ty.to(args.device),args)/len(valid)
                 print("acc : {:6.4f},\t s_acc : {:6.4f},\t sem : {:6.4f},\t clf {:6.4f},\t Gen {:6.4f}".format(*loss))
             out.append((epoch, loss))
             if args.save_step:
