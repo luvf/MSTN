@@ -84,8 +84,8 @@ def update_centers(model, s_gen, t_gen, s_true, t_clf, args):
     return s_center, t_center
     #return s_class, t_class
 
-adversarial_loss = torch.nn.BCELoss()
-classification_loss =  torch.nn.MSELoss(reduce = True)
+adversarial_loss = torch.nn.BCELoss(reduce=True)
+classification_loss =  torch.nn.MSELoss(reduce=True)
 
 def loss_batch(model, sx, tx, s_true, opt, args):
     
@@ -110,15 +110,13 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf, args)
     
 
-    
-   
 
     S_loss = classification_loss(t_c, s_c)
 
     model.s_center = s_c.detach()
     model.t_center = t_c.detach()
 
-    loss = C_loss + S_loss * args.lam  + G_loss * args.lam
+    loss = C_loss + S_loss * args.lam + G_loss * args.lam
    
     loss.backward()
     opt.step()
@@ -142,7 +140,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     '''
     return S_loss.item(), C_loss.item(), G_loss.item(), 0#D_loss.item()
 
-
+from sklearn.metrics import adjusted_rand_score
 
 def eval_batch(model, sx, tx, s_true, t_true,args):
     s_clf, s_gen, s_dis = model(sx)
@@ -172,8 +170,8 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 
     D_loss = (s_D_loss + t_D_loss)
 
-    acc = metric(t_clf, t_true, accuracy,args)
-    acc2 = metric(s_clf, s_true, accuracy,args)
+    acc = adjusted_rand_score(t_true,t_clf.argmax(1)) #metric(t_clf, t_true, accuracy,args)
+    acc2 = adjusted_rand_score(s_true,s_clf.argmax(1)) #metric(s_clf, s_true, accuracy,args)
     return np.array([acc.item(),  acc2.item(), s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
 
     
@@ -202,9 +200,6 @@ def fit(args, epochs, model, opt, dataset, valid):
 
 #utils
 
-def decay(start_rate,epoch,num_epochs):
-    return start_rate/pow(1 + 0.001*epoch, 0.75)
-
 def adaptation_factor(qq):
     return 2/(1+np.exp(- 10 * qq )) - 1
 def one_hot(batch,classes):
@@ -221,6 +216,9 @@ def accuracy(pred, true):
 def metric_help(pred, true, loss,args):
     return min([loss(pred,one_hot(torch.tensor([perm[i] for i in true]),args.n_class).to(device = args.device)) for perm in permutations(range(args.n_class)) ] )
 
+def metric2(pred, true, args):
+    pred2 = torch.argmax(pred)
+    return min([(pred2 == torch.tensor(perm)[true]).sum() for perm in permutations(range(args.n_class)) ] )/pred.size(0)
 
 def metric(pred,true, loss, args):
     n_class = args.n_class
