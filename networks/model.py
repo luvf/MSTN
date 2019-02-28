@@ -85,7 +85,7 @@ def update_centers(model, s_gen, t_gen, s_true, t_clf, args):
     #return s_class, t_class
 
 adversarial_loss = torch.nn.BCELoss()
-classification_loss =  torch.nn.MSELoss()
+classification_loss =  torch.nn.MSELoss(reduce = True)
 
 def loss_batch(model, sx, tx, s_true, opt, args):
     
@@ -111,10 +111,12 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     
 
     
-    model.s_center = s_c.detach()
-    model.t_center = t_c.detach()
+   
 
     S_loss = classification_loss(t_c, s_c)
+
+    model.s_center = s_c.detach()
+    model.t_center = t_c.detach()
 
     loss = C_loss + S_loss * args.lam  + G_loss * args.lam
    
@@ -204,7 +206,7 @@ def decay(start_rate,epoch,num_epochs):
     return start_rate/pow(1 + 0.001*epoch, 0.75)
 
 def adaptation_factor(qq):
-    return 1/(1+np.exp(- 10 * qq )) - 1
+    return 2/(1+np.exp(- 10 * qq )) - 1
 def one_hot(batch,classes):
     ones = torch.eye(classes)
     return ones.index_select(0,batch)
