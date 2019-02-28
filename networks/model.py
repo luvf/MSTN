@@ -98,7 +98,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     #helpers
     source_tag = torch.ones((sx.size(0), 1), device = args.device)
     target_tag = torch.zeros((tx.size(0), 1), device = args.device)
-    s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
+    s_true_hot = one_hot(s_true, model.n_class)
     #classification loss
     C_loss = classification_loss(s_clf, s_true)
     #C_loss = metric2(s_clf,s_true)
@@ -151,7 +151,7 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     #helpers
     source_tag = torch.ones((sx.size(0), 1), device = args.device)
     target_tag = torch.zeros((tx.size(0), 1), device = args.device)
-    s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
+    s_true_hot = one_hot(s_true, model.n_class)
 
     #classification loss
     c_loss = classification_loss(s_clf, s_true)
