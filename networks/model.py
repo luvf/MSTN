@@ -86,12 +86,12 @@ def update_centers(model, s_gen, t_gen, s_true, t_clf, args):
     #return s_class, t_class
 
 adversarial_loss = torch.nn.BCELoss()
-classification_loss = torch.nn.CrossEntropyLoss(reduction='sum')
+classification_loss = torch.nn.CrossEntropyLoss()
 center_loss = torch.nn.MSELoss(reduction='sum')
 
 def loss_batch(model, sx, tx, s_true, opt, args):
     
-    
+    opt.zero_grad()
     s_clf, s_gen, s_dis = model(sx)
     t_clf, t_gen, t_dis = model(tx)
 
@@ -118,13 +118,12 @@ def loss_batch(model, sx, tx, s_true, opt, args):
 
     model.s_center = s_c.detach()
     model.t_center = t_c.detach()
-    #print(C_loss, args.lam)
-    #print(C_loss, S_loss)
-    loss = C_loss + S_loss * args.lam + G_loss * args.lam
+    
+    loss = C_loss# + S_loss * args.lam + G_loss * args.lam
    
     loss.backward()
     opt.step()
-    opt.zero_grad()
+    
     
     # Discrimanator loss
     #opt.dis.zero_grad()
@@ -142,7 +141,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     D_loss.backward()
     opt.dis.step()
     '''
-    return S_loss.item(), C_loss.item(), G_loss.item(), 0#D_loss.item()
+    return S_loss.item(), C_loss.item(), G_loss.item()#D_loss.item()
 
 
 def eval_batch(model, sx, tx, s_true, t_true,args):
