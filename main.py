@@ -35,7 +35,7 @@ parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads 
 parser.add_argument('--img_size', type=int, default=32, help='size of each image dimension')
 parser.add_argument('--channels', type=int, default=3, help='number of image channels')
 
-parser.add_argument('--save', type=str, default="tained/model", help='dir of the trained_model')
+parser.add_argument('--save', type=str, default="trained/model", help='dir of the trained_model')
 parser.add_argument('--save_step', type=int, default=0, help='dir of the trained_model')
 
 parser.add_argument('--load', type=str, default=None, help='dir of the trained_model')
