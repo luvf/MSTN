@@ -20,7 +20,7 @@ parser.add_argument('--nc', type=int, default=256, help='dimensionality of the f
 
 
 
-parser.add_argument('--lr', type=float, default=0.02, help='adam: learning rate')
+parser.add_argument('--lr', type=float, default=0.001, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.9, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.99, help='adam: decay of first order momentum of gradient')
 
@@ -43,6 +43,7 @@ parser.add_argument('--set_device', type=str, default="cpu", help='set cuda')
 
 parser.add_argument('--dataset', type=str, default="chiffres", help='choosing dataset')
 
+parser.add_argument('--input_size', type=int, default=28*28*3, help='choosing dataset')
 
 args = parser.parse_args()
 args.device = None
@@ -62,8 +63,8 @@ if args.load != None:
     mstn.load_state_dict(torch.load(args.load))
 
 
-optim = torch.optim.Adam(mstn.parameters(), lr = args.lr, betas= (args.b1, args.b2), weight_decay = 0.0005)
-
+optim = torch.optim.Adam(mstn.parameters(), lr = args.lr, betas= (args.b1, args.b2), weight_decay = 0.005)
+#optim = torch.optim.RMSprop(mstn.parameters(), lr = args.lr, momentum= 0.9, weight_decay = 0.005)
 if (args.dataset == 'chiffres'):
 	s_train, s_test = loader.mnist_loader(args)
 	t_train, t_test = loader.svhn_loader(args)

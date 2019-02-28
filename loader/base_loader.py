@@ -5,14 +5,15 @@ from torchvision import datasets, transforms
 
 tt= transforms.Lambda(lambda x: print(x.size()))
 
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-								 std=[0.229, 0.224, 0.225])
+normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5],
+								 std=[0.5, 0.5, 0.5])
 
 
 mnist_trannsform = transforms.Compose([
-		transforms.Resize(224),
+		transforms.Resize(28),
 		transforms.ToTensor(),
 		transforms.Lambda(lambda x: x.expand(3, -1, -1)),
+        #transforms.Lambda(lambda x: x/x.sum()),
 		normalize
 	])
 
@@ -27,8 +28,9 @@ def mnist_loader(args):
 
 
 svhn_trannsform = transforms.Compose([
-		transforms.Resize(224),
+		transforms.Resize(28),#224
 		transforms.ToTensor(),
+        #transforms.Lambda(lambda x: x/x.sum()),
 		normalize
 	])
 def svhn_loader(args):
@@ -98,7 +100,7 @@ class TransferLoader:
         #self.func = func
 
     def __len__(self):
-        return min(len(self.source)-1, len(self.target)-1)
+        return min(20,len(self.source)-1, len(self.target)-1)
 
     def __iter__(self):
         s = iter(self.source)
