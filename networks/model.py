@@ -100,7 +100,7 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     target_tag = torch.zeros((tx.size(0), 1), device = args.device)
     s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
     #classification loss
-    C_loss = classification_loss(s_clf, s_true)
+    C_loss = classification_loss(s_clf, s_true.to(args.device))
     #C_loss = metric2(s_clf,s_true)
     #print(torch.abs(s_clf- s_true_hot).pow(2).mean())
     #generator loss
@@ -119,29 +119,15 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     model.s_center = s_c.detach()
     model.t_center = t_c.detach()
     
-    loss = C_loss# + S_loss * args.lam + G_loss * args.lam
+    loss = C_loss + S_loss * args.lam + G_loss * args.lam
    
     loss.backward()
     opt.step()
+
+
+    acc2 = metric2(s_clf, s_true.to(args.device))
+    return np.array([S_loss.item(), C_loss.item(), G_loss.item(),acc2.item()])
     
-    
-    # Discrimanator loss
-    #opt.dis.zero_grad()
-    '''
-    s_dis = model.dis(s_gen.detach())
-    t_dis = model.dis(t_gen.detach())
-
-  
-
-    s_D_loss = adversarial_loss(s_dis, source_tag)#0
-    t_D_loss = adversarial_loss(t_dis, target_tag)#1
-
-    D_loss = (s_D_loss + t_D_loss)/2 * args.lam
-
-    D_loss.backward()
-    opt.dis.step()
-    '''
-    return S_loss.item(), C_loss.item(), G_loss.item()#D_loss.item()
 
 
 def eval_batch(model, sx, tx, s_true, t_true,args):
@@ -154,11 +140,13 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
     s_true_hot = one_hot(s_true, model.n_class).to(device=args.device)
 
     #classification loss
-    c_loss = classification_loss(s_clf, s_true)
+    c_loss = classification_loss(s_clf, s_true.to(args.device))
     #generator loss
     s_G_loss = adversarial_loss(s_dis, source_tag)#0
     t_G_loss = adversarial_loss(t_dis, target_tag)#1
     G_loss = (s_G_loss + t_G_loss)
+    
+
     #center loss more tricky
     s_c, t_c = update_centers(model, s_gen, t_gen, s_true_hot, t_clf,args)
     model.s_center = s_c.detach()
@@ -168,8 +156,8 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 
 
     acc = metric2(t_clf, t_true)
-    acc2 = metric2(s_clf, s_true)
-    return np.array([acc.item(),  acc2.item(), s_loss.item(), c_loss.item(), G_loss.item()])
+    acc2 = metric2(s_clf, s_true.to(args.device))
+    return np.array([ s_loss.item(), c_loss.item(), G_loss.item(), acc2.item(),  acc.item(),])
 
     
 def fit(args, epochs, model, opt, dataset, valid):
@@ -181,22 +169,22 @@ def fit(args, epochs, model, opt, dataset, valid):
         #args.lr = opt.param_groups[-1]["lr"]
         #opt = MSTNoptim(model, args)
         args.lam  = adaptation_factor(epoch*1.0/epochs)
-
+        loss = np.zeros(4)
         for sx, sy, tx,_ in tqdm(dataset):
-            loss = loss_batch(model, sx.to(args.device), tx.to(args.device), sy.to(args.device), opt, args)
-            #print(list(model.clf.parameters()))
+            
+            loss += loss_batch(model, sx.to(args.device), tx.to(args.device), sy, opt, args)/len(dataset)
+        print("sem : {:6.4f},\t clf {:6.4f},\t Gen {:6.4f},\t s_acc : {:6.4f}".format(*loss))
         model.eval()
-        if epoch %5 == 0:
-            with torch.no_grad():
-                loss = np.zeros(5)
-                for sx, sy, tx, ty in tqdm(valid):
-                    loss += eval_batch(model, sx.to(args.device), tx.to(args.device), sy.to(args.device), ty.to(args.device),args)/len(valid)
-                print("acc : {:6.4f},\t s_acc : {:6.4f},\t sem : {:6.4f},\t clf {:6.4f},\t Gen {:6.4f}".format(*loss))
-            out.append((epoch, loss))
-            if args.save_step:
-                file  = open("args.save", "w")
-                torch.save(model.state_dict(), args.save+'step')
-                np.save(file,out)
+        with torch.no_grad():
+            loss = np.zeros(5)
+            for sx, sy, tx, ty in tqdm(valid):
+                loss += eval_batch(model, sx.to(args.device), tx.to(args.device), sy, ty.to(args.device),args)/len(valid)
+            print("sem : {:6.4f},\t clf {:6.4f},\t Gen {:6.4f},\t s_acc : {:6.4f},\t acc : {:6.4f}".format(*loss))
+        out.append((epoch, loss))
+        if args.save_step:
+            file  = open("args.save", "w")
+            torch.save(model.state_dict(), args.save+'step')
+            np.save(file,out)
     return out
 
 #utils
