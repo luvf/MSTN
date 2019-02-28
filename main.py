@@ -62,7 +62,7 @@ if args.load != None:
     mstn.load_state_dict(torch.load(args.load))
 
 
-optim = MSTNoptim(mstn, args)
+optim = torch.optim.Adam(mstn.parameters(), lr = args.lr, betas= (args.b1, args.b2), weight_decay = 0.0005)
 
 if (args.dataset == 'chiffres'):
 	s_train, s_test = loader.mnist_loader(args)
