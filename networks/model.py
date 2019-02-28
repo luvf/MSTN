@@ -84,7 +84,7 @@ def update_centers(model, s_gen, t_gen, s_true, t_clf, args):
     return s_center, t_center
     #return s_class, t_class
 
-adversarial_loss = torch.nn.BCELoss(reduce=True)
+adversarial_loss = torch.nn.BCELoss(size_average = True , reduce=True)
 classification_loss =  torch.nn.MSELoss(reduce=True)
 
 def loss_batch(model, sx, tx, s_true, opt, args):
@@ -170,8 +170,8 @@ def eval_batch(model, sx, tx, s_true, t_true,args):
 
     D_loss = (s_D_loss + t_D_loss)
 
-    acc = adjusted_rand_score(t_true,t_clf.argmax(1)) #metric(t_clf, t_true, accuracy,args)
-    acc2 = adjusted_rand_score(s_true,s_clf.argmax(1)) #metric(s_clf, s_true, accuracy,args)
+    acc = metric(t_clf, t_true, accuracy,args)
+    acc2 = metric(s_clf, s_true, accuracy,args)
     return np.array([acc.item(),  acc2.item(), s_loss.item(), c_loss.item(), G_loss.item(), D_loss.item()])
 
     
