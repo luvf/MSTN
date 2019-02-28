@@ -140,7 +140,6 @@ def loss_batch(model, sx, tx, s_true, opt, args):
     '''
     return S_loss.item(), C_loss.item(), G_loss.item(), 0#D_loss.item()
 
-from sklearn.metrics import adjusted_rand_score
 
 def eval_batch(model, sx, tx, s_true, t_true,args):
     s_clf, s_gen, s_dis = model(sx)
