@@ -133,7 +133,6 @@ def loss_batch(model, sx, tx, s_true, opt, args):
 def eval_batch(model, sx, tx, s_true, t_true,args):
     t_clf, t_gen, t_dis = model(tx)
     s_clf, s_gen, s_dis = model(sx)
-    print(t_true)
     #helpers
     source_tag = torch.ones((sx.size(0), 1), device = args.device)
     target_tag = torch.zeros((tx.size(0), 1), device = args.device)
