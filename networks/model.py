@@ -66,8 +66,8 @@ class MSTN(nn.Module):
 
 
 def update_centers(model, s_gen, t_gen, s_true, t_clf, args):
-    source = torch.argmax(s_true, 1).reshape(t_clf.size(0),1)# one Hot 
-    target = torch.argmax(t_clf, 1).reshape(t_clf.size(0),1)
+    source = torch.argmax(s_true, 1).reshape(t_clf.size(0),1).detach()# one Hot 
+    target = torch.argmax(t_clf, 1).reshape(t_clf.size(0),1).detach()
 
     s_center = torch.zeros(model.n_class, model.n_features, device=args.device)
     t_center = torch.zeros(model.n_class, model.n_features, device=args.device)
