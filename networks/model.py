@@ -168,20 +168,20 @@ def fit(args, epochs, model, opt, dataset, valid):
         #args.lr = opt.param_groups[-1]["lr"]
         #opt = MSTNoptim(model, args)
         args.lam  = adaptation_factor(epoch*1.0/epochs)
-        loss = np.zeros(4)
+        losst = np.zeros(4)
         for sx, sy, tx,_ in tqdm(dataset):
             
-            loss += loss_batch(model, sx.to(args.device), tx.to(args.device), sy, opt, args)/len(dataset)
-        print("sem : {:6.4f},\t clf {:6.4f},\t Gen {:6.4f},\t s_acc : {:6.4f}".format(*loss))
+            losst += loss_batch(model, sx.to(args.device), tx.to(args.device), sy, opt, args)/len(dataset)
+        print("sem : {:6.4f},\t clf {:6.4f},\t Gen {:6.4f},\t s_acc : {:6.4f}".format(*losst))
         model.eval()
         with torch.no_grad():
             loss = np.zeros(5)
             for sx, sy, tx, ty in tqdm(valid):
                 loss += eval_batch(model, sx.to(args.device), tx.to(args.device), sy, ty.to(args.device),args)/len(valid)
             print("sem : {:6.4f},\t clf {:6.4f},\t Gen {:6.4f},\t s_acc : {:6.4f},\t acc : {:6.4f}".format(*loss))
-        out.append((epoch, loss))
+        out.append((epoch, losst,loss))
         if args.save_step:
-            file  = open("args.save", "w")
+            file  = open(args.save+"_loss", "wb")
             torch.save(model.state_dict(), args.save+'step')
             np.save(file,out)
     return out

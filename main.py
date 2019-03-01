@@ -24,7 +24,7 @@ parser.add_argument('--lr', type=float, default=0.0001, help='adam: learning rat
 parser.add_argument('--b1', type=float, default=0.7, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.8, help='adam: decay of first order momentum of gradient')
 
-parser.add_argument('--center_interita', type=int, default=0.7, help='centers inertia over batches')
+parser.add_argument('--center_interita', type=float, default=0.7, help='centers inertia over batches')
 #parser.add_argument('--adv_w', type=float, default=0.999, help='adversarial wheight')
 #parser.add_argument('--lam', type=float, default=0., help='semantic wheight')
 
