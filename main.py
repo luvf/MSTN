@@ -5,7 +5,7 @@ import torch
 
 
 from networks.base_network import AlexGen
-from networks.model import MSTN, fit, MSTNoptim
+from networks.model import MSTN, fit
 
 import loader.base_loader as loader
 

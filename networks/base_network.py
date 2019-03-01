@@ -118,7 +118,6 @@ class Classifier(nn.Module):
 class Rx(nn.Module):
     """docstring for Generator"""
    
-    
     def forward(semf, i):
         return i
 
